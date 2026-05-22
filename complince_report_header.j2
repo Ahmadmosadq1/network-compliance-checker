@@ -1,0 +1,31 @@
+===============================================================================
+                     Network Security Compliance Check
+===============================================================================
+
+Date: {{ ansible_date_time.date }}
+Time: {{ ansible_date_time.time }}
+
+{% for host in ansible_play_hosts | sort %}
+
+===============================================================================
+Host_Name: {{ hostvars[host].ansible_net_hostname | default(host) }}
+Compliance_Score: {{ hostvars[host].compliance_ration | default('N/A') }}
+Compliance_Percentage: {{ hostvars[host].compliance_percentage | default('N/A') }}
+===============================================================================
+
+Telnet_Check:
+{{ hostvars[host].telnet_check_result.msg | default('[N/A]') }}
+
+SSH_Version_Check:
+{{ hostvars[host].version_check_result.msg | default('[N/A]') }}
+
+Enable_Secret_Check:
+{{ hostvars[host].SSH_secret_check_result.msg | default('[N/A]') }}
+
+HTTP_Server_Disabled_Check:
+{{ hostvars[host].http_result.msg | default('[N/A]') }}
+
+Session Timeout Compliance Check (5–10 Minutes):
+{{ hostvars[host].session_check_result.msg | default('[N/A]') }}
+
+{% endfor %}
