@@ -2,30 +2,182 @@
                      Network Security Compliance Check
 ===============================================================================
 
-Date: {{ ansible_date_time.date }}
-Time: {{ ansible_date_time.time }}
+Date: 2026-05-23
+Time: 01:27:23
 
-{% for host in ansible_play_hosts | sort %}
 
 ===============================================================================
-Host_Name: {{ hostvars[host].ansible_net_hostname | default(host) }}
-Compliance_Score: {{ hostvars[host].compliance_ration | default('N/A') }}
-Compliance_Percentage: {{ hostvars[host].compliance_percentage | default('N/A') }}
+Host_Name: R1
+Compliance_Score: 5/5
+Compliance_Percentage: 100.0%
 ===============================================================================
 
 Telnet_Check:
-{{ hostvars[host].telnet_check_result.msg | default('[N/A]') }}
+🟢 PASS R1: telnet is not configured
 
 SSH_Version_Check:
-{{ hostvars[host].version_check_result.msg | default('[N/A]') }}
+🟢 PASS R1: SSH version is up to date
 
 Enable_Secret_Check:
-{{ hostvars[host].SSH_secret_check_result.msg | default('[N/A]') }}
+🟢 PASS R1: enable secret is configured
 
 HTTP_Server_Disabled_Check:
-{{ hostvars[host].http_result.msg | default('[N/A]') }}
+🟢 PASS R1: has HTTP disabled
 
 Session Timeout Compliance Check (5–10 Minutes):
-{{ hostvars[host].session_check_result.msg | default('[N/A]') }}
+🟢 PASS R1: session timeout is within the compliant range
 
-{% endfor %}
+
+===============================================================================
+Host_Name: R2
+Compliance_Score: 4/5
+Compliance_Percentage: 80.0%
+===============================================================================
+
+Telnet_Check:
+🟢 PASS R2: telnet is not configured
+
+SSH_Version_Check:
+🟢 PASS R2: SSH version is up to date
+
+Enable_Secret_Check:
+🟢 PASS R2: enable secret is configured
+
+HTTP_Server_Disabled_Check:
+🔴 FAIL R2: has HTTP enabled
+
+Session Timeout Compliance Check (5–10 Minutes):
+🟢 PASS R2: session timeout is within the compliant range
+
+
+===============================================================================
+Host_Name: R3
+Compliance_Score: 4/5
+Compliance_Percentage: 80.0%
+===============================================================================
+
+Telnet_Check:
+🔴 FAIL R3: telnet is configured
+
+SSH_Version_Check:
+🟢 PASS R3: SSH version is up to date
+
+Enable_Secret_Check:
+🟢 PASS R3: enable secret is configured
+
+HTTP_Server_Disabled_Check:
+🟢 PASS R3: has HTTP disabled
+
+Session Timeout Compliance Check (5–10 Minutes):
+🟢 PASS R3: session timeout is within the compliant range
+
+
+===============================================================================
+Host_Name: R4
+Compliance_Score: 5/5
+Compliance_Percentage: 100.0%
+===============================================================================
+
+Telnet_Check:
+🟢 PASS R4: telnet is not configured
+
+SSH_Version_Check:
+🟢 PASS R4: SSH version is up to date
+
+Enable_Secret_Check:
+🟢 PASS R4: enable secret is configured
+
+HTTP_Server_Disabled_Check:
+🟢 PASS R4: has HTTP disabled
+
+Session Timeout Compliance Check (5–10 Minutes):
+🟢 PASS R4: session timeout is within the compliant range
+
+
+===============================================================================
+Host_Name: SW1
+Compliance_Score: 5/5
+Compliance_Percentage: 100.0%
+===============================================================================
+
+Telnet_Check:
+🟢 PASS SW1: telnet is not configured
+
+SSH_Version_Check:
+🟢 PASS SW1: SSH version is up to date
+
+Enable_Secret_Check:
+🟢 PASS SW1: enable secret is configured
+
+HTTP_Server_Disabled_Check:
+🟢 PASS SW1: has HTTP disabled
+
+Session Timeout Compliance Check (5–10 Minutes):
+🟢 PASS SW1: session timeout is within the compliant range
+
+
+===============================================================================
+Host_Name: SW2
+Compliance_Score: 5/5
+Compliance_Percentage: 100.0%
+===============================================================================
+
+Telnet_Check:
+🟢 PASS SW2: telnet is not configured
+
+SSH_Version_Check:
+🟢 PASS SW2: SSH version is up to date
+
+Enable_Secret_Check:
+🟢 PASS SW2: enable secret is configured
+
+HTTP_Server_Disabled_Check:
+🟢 PASS SW2: has HTTP disabled
+
+Session Timeout Compliance Check (5–10 Minutes):
+🟢 PASS SW2: session timeout is within the compliant range
+
+
+===============================================================================
+Host_Name: SW3
+Compliance_Score: 4/5
+Compliance_Percentage: 80.0%
+===============================================================================
+
+Telnet_Check:
+🟢 PASS SW3: telnet is not configured
+
+SSH_Version_Check:
+🟢 PASS SW3: SSH version is up to date
+
+Enable_Secret_Check:
+🟢 PASS SW3: enable secret is configured
+
+HTTP_Server_Disabled_Check:
+🟢 PASS SW3: has HTTP disabled
+
+Session Timeout Compliance Check (5–10 Minutes):
+🔴 FAIL SW3: session timeout is outside the compliant range
+
+
+===============================================================================
+Host_Name: SW4
+Compliance_Score: 5/5
+Compliance_Percentage: 100.0%
+===============================================================================
+
+Telnet_Check:
+🟢 PASS SW4: telnet is not configured
+
+SSH_Version_Check:
+🟢 PASS SW4: SSH version is up to date
+
+Enable_Secret_Check:
+🟢 PASS SW4: enable secret is configured
+
+HTTP_Server_Disabled_Check:
+🟢 PASS SW4: has HTTP disabled
+
+Session Timeout Compliance Check (5–10 Minutes):
+🟢 PASS SW4: session timeout is within the compliant range
+
