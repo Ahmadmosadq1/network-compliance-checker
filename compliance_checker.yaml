@@ -1,0 +1,191 @@
+# Compliance Checker Playbook
+# Checks: VLANs, dot1q, native VLAN, date/time, report generation
+
+- name: Compliance Checker
+  hosts: switches:routers
+  gather_facts: false
+  vars:
+    complince_score: 0
+    total_checks: 0
+  tasks:
+
+
+    #====Gathering IOS facts=====#
+
+    - name: gather ios facts
+      cisco.ios.ios_facts:
+
+
+    #====Remote Access Hardening complince====#
+
+    - name: gathering secutity configuraion
+      ios_command:
+        commands:
+        - show running-config | include transport input
+      register: security_check
+
+    #======checking SSH/telnet complince======#
+
+    - name: SSH/Telnet complince
+      block:
+        - name: checking if telnet is not configured
+          assert:
+            that: 
+              - "'telnet' not in security_check.stdout[0] | lower"
+              - "'all' not in security_check.stdout[0] | lower"
+            fail_msg: "🔴 FAIL {{ ansible_net_hostname }}: telnet is configured"
+            success_msg: "🟢 PASS {{ ansible_net_hostname }}: telnet is not configured"
+          register: telnet_check_result
+
+          #====updating_complince_score=====#
+
+        - name: calculating complince score
+          set_fact:
+            complince_score: "{{ complince_score | int + (1 if telnet_check_result is succeeded else 0) }}"
+            total_checks: "{{ total_checks | int + 1 }}"
+
+
+        #==============Gathering SSH version info ========#
+
+        - name: gathering SSH version
+          ios_command:
+            commands:
+              - show ip ssh
+          register: ssh_version
+
+        #=============checking if ssh verion is updated==========#
+
+        - name: checking if ssh is version 2
+          assert:
+            that: 
+              - ssh_version.stdout[0] is search('(?i)version\s2\.[0-9]+')
+            fail_msg: "🔴 FAIL {{ ansible_net_hostname }}: SSH is outdated"
+            success_msg: "🟢 PASS {{ ansible_net_hostname }}: SSH version is up to date"
+          register: version_check_result
+
+          #====updating_complince_score=====#
+
+        - name: calculating complince score
+          set_fact:
+            complince_score: "{{ complince_score | int + (1 if version_check_result is succeeded else 0) }}"
+            total_checks: "{{ total_checks | int + 1 }}"
+
+         #==============Gathering SSH password configuration ========#
+
+        - name: gathering SSH password configuration
+          ios_command:
+            commands:
+              - show running-config | include enable secret
+          register: ssh_password
+
+
+          #=======checking if enable secrete is configured======#
+        - name: checking enable_secret
+          assert:
+            that:
+              - ssh_password.stdout[0] is search('(?i)^enable\s+secret')
+            fail_msg: "🔴 FAIL {{ ansible_net_hostname }}: enable secret is not configured"
+            success_msg: "🟢 PASS {{ ansible_net_hostname }}: enable secret is configured"
+          register: SSH_secret_check_result
+
+         #====updating_complince_score=====#
+
+        - name: calculating complince score
+          set_fact:
+            complince_score: "{{ complince_score | int + (1 if SSH_secret_check_result is succeeded else 0) }}"
+            total_checks: "{{ total_checks | int + 1 }}"
+        
+        #========gather HTTP info===========#
+
+        - name: HTTP info
+          ios_command:
+            commands:
+              - show running-config | include ip http
+          register: http_check
+
+        #========HTTP Server Disabled Check==========#
+        
+        - name: http_check
+          assert:
+            that:
+              - http_check.stdout[0] is search('(?i)^no\sip\shttp\sserver')
+            fail_msg: "🔴 FAIL {{ ansible_net_hostname }}: has HTTP enabled"
+            success_msg: "🟢 PASS {{ ansible_net_hostname }}: has HTTP disabled"
+          register: http_result
+
+            #====updating_complince_score=====#
+
+        - name: calculating complince score
+          set_fact:
+            complince_score: "{{ complince_score | int + (1 if http_result is succeeded else 0) }}"
+            total_checks: "{{ total_checks | int + 1 }}"
+
+
+        #========Session timeout info gathering==========#
+
+
+        - name: session_info
+          ios_command:
+            commands:
+              - show running-config | include exec-timeout
+          register: session_check
+
+          #=============== Session Timeout Compliance Check (5–10 Minutes) ==================#
+        
+        - name: session timeout check
+          assert:
+            that:
+              - session_check.stdout[0] is search('(?mi)^exec-timeout\s([5-9]|10)')
+            fail_msg: "🔴 FAIL {{ ansible_net_hostname }}: session timeout is outside the compliant range"
+            success_msg: "🟢 PASS {{ ansible_net_hostname }}: session timeout is within the compliant range"
+          register: session_check_result
+
+            #====updating_complince_score=====#
+
+        - name: calculating complince score
+          set_fact:
+            complince_score: "{{ complince_score | int + (1 if session_check_result is succeeded else 0) }}"
+            total_checks: "{{ total_checks | int + 1 }}"
+
+
+          
+        
+
+      ignore_errors: true
+      when:
+        - security_check.stdout[0] | trim | length > 0
+      
+    #=====calculating TOATL complince score====#
+
+    - name: complince score
+      set_fact:
+        compliance_percentage: "{{ ((complince_score | int) / (total_checks | int)) * 100 }}%"
+        compliance_ration: "{{ complince_score | int }}/{{ total_checks | int }}"
+
+
+
+    # ======== Report Generation ======== #
+     
+  
+    #========time sync of ansible time with my local machine time======#
+
+    - name: Gather current time from control node
+      ansible.builtin.setup:
+        filter: ansible_date_time
+      delegate_to: localhost
+      run_once: true
+
+    #=====creating and updating the complince repoert=====#
+    - name: Generate compliance report
+      ansible.builtin.template:
+        src: complince_report.j2
+        dest: "/home/ahmed/projects/Autocore_Andreas/CH2_Ansible/complince_report.j2"
+    
+
+    - name: debugging
+      debug:
+        msg: 
+          - "{{ compliance_percentage }}"
+          - "{{ compliance_ration }}"
+      
+    
