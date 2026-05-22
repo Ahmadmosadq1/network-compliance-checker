@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NetComply — Ansible Network Compliance Checker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0c0f;
+      --surface: #111418;
+      --border: #1e2530;
+      --accent: #00e5a0;
+      --accent2: #0077ff;
+      --warn: #ff6b35;
+      --text: #e8edf2;
+      --muted: #6b7a8d;
+      --mono: 'Space Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      overflow-x: hidden;
+    }
+
+    /* ─── NOISE OVERLAY ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.4;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.2rem 4rem;
+      background: rgba(10,12,15,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2.5rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--accent); }
+
+    /* ─── HERO ─── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 8rem 4rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.3;
+      mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 100%);
+    }
+
+    .hero-glow {
+      position: absolute;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,229,160,0.08) 0%, transparent 70%);
+      top: 10%; left: -10%;
+      animation: drift 8s ease-in-out infinite alternate;
+    }
+
+    .hero-glow2 {
+      position: absolute;
+      width: 400px; height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,119,255,0.07) 0%, transparent 70%);
+      bottom: 10%; right: 5%;
+      animation: drift 10s ease-in-out infinite alternate-reverse;
+    }
+
+    @keyframes drift {
+      from { transform: translate(0, 0); }
+      to   { transform: translate(40px, 30px); }
+    }
+
+    .hero-tag {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--accent);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards 0.2s;
+    }
+
+    .hero h1 {
+      font-size: clamp(3rem, 7vw, 6rem);
+      font-weight: 800;
+      line-height: 1.0;
+      letter-spacing: -0.03em;
+      max-width: 900px;
+      opacity: 0;
+      animation: fadeUp 0.7s ease forwards 0.4s;
+    }
+
+    .hero h1 span { color: var(--accent); }
+
+    .hero-sub {
+      margin-top: 1.5rem;
+      font-family: var(--mono);
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.7;
+      opacity: 0;
+      animation: fadeUp 0.7s ease forwards 0.6s;
+    }
+
+    .hero-cta {
+      margin-top: 3rem;
+      display: flex;
+      gap: 1rem;
+      opacity: 0;
+      animation: fadeUp 0.7s ease forwards 0.8s;
+    }
+
+    .btn {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.85rem 2rem;
+      border-radius: 4px;
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+    }
+
+    .btn-primary:hover {
+      background: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0,229,160,0.3);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    /* ─── STATS BAR ─── */
+    .stats-bar {
+      display: flex;
+      gap: 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .stat {
+      flex: 1;
+      padding: 2rem;
+      border-right: 1px solid var(--border);
+      opacity: 0;
+      animation: fadeUp 0.5s ease forwards;
+    }
+
+    .stat:last-child { border-right: none; }
+    .stat:nth-child(1) { animation-delay: 0.1s; }
+    .stat:nth-child(2) { animation-delay: 0.2s; }
+    .stat:nth-child(3) { animation-delay: 0.3s; }
+    .stat:nth-child(4) { animation-delay: 0.4s; }
+
+    .stat-num {
+      font-family: var(--mono);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 0.3rem;
+    }
+
+    /* ─── SECTIONS ─── */
+    section {
+      padding: 7rem 4rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-tag {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .section-title {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      max-width: 700px;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-body {
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.8;
+      max-width: 640px;
+    }
+
+    /* ─── PROBLEM ─── */
+    .problem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      margin-top: 4rem;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .problem-card {
+      background: var(--surface);
+      padding: 2.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.2s;
+    }
+
+    .problem-card:hover { background: #161b22; }
+
+    .problem-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: var(--accent);
+      transform: scaleY(0);
+      transition: transform 0.3s;
+      transform-origin: bottom;
+    }
+
+    .problem-card:hover::before { transform: scaleY(1); }
+
+    .problem-icon {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .problem-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    .problem-card p {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* ─── HOW IT WORKS ─── */
+    .how-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: start;
+      margin-top: 4rem;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .step {
+      display: flex;
+      gap: 1.5rem;
+      padding: 2rem 0;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+
+    .step:last-child { border-bottom: none; }
+
+    .step-num {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      min-width: 2rem;
+      padding-top: 0.2rem;
+    }
+
+    .step h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .step p {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* ─── CODE BLOCK ─── */
+    .code-panel {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      position: sticky;
+      top: 6rem;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.9rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      background: #161b22;
+    }
+
+    .code-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+
+    .code-title {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-left: 0.5rem;
+    }
+
+    .code-body {
+      padding: 1.5rem;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.8;
+      overflow-x: auto;
+    }
+
+    .c-comment { color: #4a5568; }
+    .c-key     { color: #00e5a0; }
+    .c-val     { color: #79c0ff; }
+    .c-str     { color: #a5d6ff; }
+    .c-kw      { color: #ff7b72; }
+    .c-name    { color: #ffa657; }
+
+    /* ─── CHECKS ─── */
+    .checks-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      margin-top: 4rem;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .check-item {
+      background: var(--surface);
+      padding: 1.8rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: background 0.2s;
+    }
+
+    .check-item:hover { background: #161b22; }
+
+    .check-icon {
+      width: 36px; height: 36px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .check-icon.pass { background: rgba(0,229,160,0.1); }
+    .check-icon.warn { background: rgba(255,107,53,0.1); }
+
+    .check-label {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--text);
+    }
+
+    /* ─── STACK ─── */
+    .stack-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 3rem;
+    }
+
+    .stack-pill {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      padding: 0.6rem 1.2rem;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--muted);
+      transition: all 0.2s;
+    }
+
+    .stack-pill:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ─── FINDINGS ─── */
+    .findings-table {
+      margin-top: 3rem;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .findings-row {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    .findings-row:last-child { border-bottom: none; }
+    .findings-row:hover { background: var(--surface); }
+
+    .findings-row.header {
+      background: var(--surface);
+    }
+
+    .findings-cell {
+      padding: 1rem 1.5rem;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      border-right: 1px solid var(--border);
+    }
+
+    .findings-cell:last-child { border-right: none; }
+
+    .findings-row.header .findings-cell {
+      color: var(--muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 3px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .badge-pass { background: rgba(0,229,160,0.15); color: var(--accent); }
+    .badge-fail { background: rgba(255,107,53,0.15); color: var(--warn); }
+
+    /* ─── CONCLUSION ─── */
+    .conclusion {
+      background: var(--surface);
+    }
+
+    .conclusion-inner {
+      max-width: 800px;
+    }
+
+    .conclusion blockquote {
+      margin-top: 3rem;
+      padding: 2rem 2.5rem;
+      border-left: 3px solid var(--accent);
+      background: rgba(0,229,160,0.04);
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      color: var(--text);
+      line-height: 1.8;
+    }
+
+    /* ─── FOOTER ─── */
+    footer {
+      padding: 2.5rem 4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--border);
+    }
+
+    footer p {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    footer a {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* ─── ANIMATIONS ─── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 900px) {
+      nav { padding: 1rem 1.5rem; }
+      .nav-links { display: none; }
+      .hero { padding: 7rem 1.5rem 3rem; }
+      section { padding: 4rem 1.5rem; }
+      .how-layout { grid-template-columns: 1fr; gap: 3rem; }
+      .checks-grid { grid-template-columns: 1fr 1fr; }
+      .problem-grid { grid-template-columns: 1fr; }
+      .stats-bar { flex-wrap: wrap; }
+      .stat { flex: 1 1 50%; border-right: none; border-bottom: 1px solid var(--border); }
+      footer { flex-direction: column; gap: 1rem; text-align: center; padding: 2rem 1.5rem; }
+      .findings-row { grid-template-columns: 1fr 1fr; }
+      .findings-cell:nth-child(2) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo">// NetComply</div>
+    <ul class="nav-links">
+      <li><a href="#problem">Problem</a></li>
+      <li><a href="#how">How It Works</a></li>
+      <li><a href="#findings">Findings</a></li>
+      <li><a href="#conclusion">Conclusion</a></li>
+      <li><a href="https://github.com/YOUR_USERNAME/YOUR_REPO" class="btn btn-primary" style="padding:0.5rem 1.2rem;">GitHub →</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-grid"></div>
+    <div class="hero-glow"></div>
+    <div class="hero-glow2"></div>
+    <div class="hero-tag">// Portfolio Project — Network Automation</div>
+    <h1>Ansible Network<br><span>Compliance</span><br>Checker</h1>
+    <p class="hero-sub">An automated compliance auditing tool for Cisco IOS routers and switches — built with Ansible, tested in a CML lab environment.</p>
+    <div class="hero-cta">
+      <a href="https://github.com/YOUR_USERNAME/YOUR_REPO" class="btn btn-primary">View on GitHub</a>
+      <a href="#how" class="btn btn-secondary">How It Works</a>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-num">8+</div>
+      <div class="stat-label">Compliance Checks</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">6</div>
+      <div class="stat-label">Lab Devices</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">100%</div>
+      <div class="stat-label">Agentless</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">IOS</div>
+      <div class="stat-label">Platform Target</div>
+    </div>
+  </div>
+
+  <!-- PROBLEM -->
+  <section id="problem">
+    <div class="section-tag">// 01 — The Problem</div>
+    <h2 class="section-title reveal">Manual audits don't scale.</h2>
+    <p class="section-body reveal">In enterprise and service provider networks, verifying security configurations across dozens of devices is slow, error-prone, and inconsistent. One misconfigured device is all it takes.</p>
+
+    <div class="problem-grid reveal">
+      <div class="problem-card">
+        <div class="problem-icon">⏱</div>
+        <h3>Time-consuming audits</h3>
+        <p>Manual SSH into each device, running show commands, comparing output against a policy document — repeated for every device, every audit cycle.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">⚠️</div>
+        <h3>Human error</h3>
+        <p>Engineers miss things. A Telnet-enabled VTY line or an HTTP server left on is easy to overlook when checking 40 devices manually.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">📋</div>
+        <h3>No audit trail</h3>
+        <p>Manual checks leave no structured record. When compliance is questioned, there's no evidence of what was checked, when, and what the result was.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">🔁</div>
+        <h3>Not repeatable</h3>
+        <p>Different engineers check different things in different ways. There's no guarantee the same policy is applied consistently across all devices.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how">
+    <div class="section-tag">// 02 — How It Works</div>
+    <h2 class="section-title reveal">Gather. Assert. Report.</h2>
+    <p class="section-body reveal">The checker uses Ansible's native IOS resource modules to pull structured configuration state directly from devices — no screen scraping, no TextFSM parsing.</p>
+
+    <div class="how-layout">
+      <div class="steps reveal">
+        <div class="step">
+          <span class="step-num">01</span>
+          <div>
+            <h3>Inventory Definition</h3>
+            <p>Devices are grouped in a YAML inventory file (routers, switches). Credentials are injected via Ansible Vault — no plaintext passwords in the repo.</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-num">02</span>
+          <div>
+            <h3>State Gathering</h3>
+            <p>Resource modules like <code style="color:var(--accent)">ios_vlans</code>, <code style="color:var(--accent)">ios_interfaces</code>, and <code style="color:var(--accent)">ios_ntp_global</code> are run with <code style="color:var(--accent)">state: gathered</code> to pull live config as structured data.</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-num">03</span>
+          <div>
+            <h3>Compliance Assertions</h3>
+            <p>Each gathered fact is evaluated against policy using Ansible assert tasks with <code style="color:var(--accent)">ignore_errors: true</code> — so the playbook runs to completion and reports all violations, not just the first one.</p>
+          </div>
+        </div>
+        <div class="step">
+          <span class="step-num">04</span>
+          <div>
+            <h3>Results</h3>
+            <p>Pass/fail output per device per check. Violations are clearly flagged with the assert failure message identifying exactly what the issue is.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-panel reveal">
+        <div class="code-header">
+          <div class="code-dot" style="background:#ff5f56"></div>
+          <div class="code-dot" style="background:#ffbd2e"></div>
+          <div class="code-dot" style="background:#27c93f"></div>
+          <span class="code-title">check_ssh.yml</span>
+        </div>
+        <div class="code-body">
+<pre><span class="c-comment">---</span>
+<span class="c-key">- name</span><span class="c-comment">:</span> <span class="c-str">Gather VTY line config</span>
+  <span class="c-key">cisco.ios.ios_command</span><span class="c-comment">:</span>
+    <span class="c-key">commands</span><span class="c-comment">:</span>
+      <span class="c-comment">-</span> <span class="c-str">show run | section line vty</span>
+  <span class="c-key">register</span><span class="c-comment">:</span> <span class="c-name">vty_output</span>
+
+<span class="c-key">- name</span><span class="c-comment">:</span> <span class="c-str">Assert SSH only (no Telnet)</span>
+  <span class="c-key">ansible.builtin.assert</span><span class="c-comment">:</span>
+    <span class="c-key">that</span><span class="c-comment">:</span>
+      <span class="c-comment">-</span> <span class="c-str">"'transport input all' not in
+         vty_output.stdout[0]"</span>
+      <span class="c-comment">-</span> <span class="c-str">"'transport input telnet' not in
+         vty_output.stdout[0]"</span>
+    <span class="c-key">fail_msg</span><span class="c-comment">:</span> <span class="c-str">FAIL — Telnet enabled on VTY</span>
+    <span class="c-key">success_msg</span><span class="c-comment">:</span> <span class="c-str">PASS — SSH only</span>
+  <span class="c-key">ignore_errors</span><span class="c-comment">:</span> <span class="c-kw">true</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHECKS -->
+  <section>
+    <div class="section-tag">// 03 — Compliance Checks</div>
+    <h2 class="section-title reveal">What gets audited</h2>
+
+    <div class="checks-grid reveal">
+      <div class="check-item">
+        <div class="check-icon pass">🔒</div>
+        <span class="check-label">SSH v2 enforcement</span>
+      </div>
+      <div class="check-item">
+        <div class="check-icon warn">⛔</div>
+        <span class="check-label">Telnet disabled</span>
+      </div>
+      <div class="check-item">
+        <div class="check-icon warn">⛔</div>
+        <span class="check-label">HTTP server disabled</span>
+      </div>
+      <div class="check-item">
+        <div class="check-icon pass">🔒</div>
+        <span class="check-label">Password encryption enabled</span>
+      </div>
+      <div class="check-item">
+        <div class="check-icon pass">🕐</div>
+        <span class="check-label">NTP server configured</span>
+      </div>
+      <div class="check-item">
+        <div class="check-icon pass">📡</div>
+        <span class="check-label">Syslog server configured</span>
+      </div>
+      <div class="check-item">
+        <div class="check-icon pass">🔑</div>
+        <span class="check-label">VTY ACL applied</span>
+      </div>
+      <div class="check-item">
+        <div class="check-icon pass">⏱</div>
+        <span class="check-label">Session timeout ≤ 10 min</span>
+      </div>
+      <div class="check-item">
+        <div class="check-icon pass">🏷</div>
+        <span class="check-label">VLAN policy compliance</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- TECH STACK -->
+  <section>
+    <div class="section-tag">// 04 — Tech Stack</div>
+    <h2 class="section-title reveal">Built with</h2>
+    <div class="stack-list reveal">
+      <span class="stack-pill">Ansible Core</span>
+      <span class="stack-pill">cisco.ios collection</span>
+      <span class="stack-pill">Ansible Vault</span>
+      <span class="stack-pill">Cisco IOS / IOS-XE</span>
+      <span class="stack-pill">CML (Cisco Modeling Labs)</span>
+      <span class="stack-pill">YAML</span>
+      <span class="stack-pill">Jinja2</span>
+      <span class="stack-pill">Python</span>
+      <span class="stack-pill">SSH / NETCONF</span>
+    </div>
+  </section>
+
+  <!-- FINDINGS -->
+  <section id="findings">
+    <div class="section-tag">// 05 — Lab Results</div>
+    <h2 class="section-title reveal">What the checker found</h2>
+    <p class="section-body reveal">Ran against a 6-device CML lab — 4 routers (R1–R4) and 4 switches (SW1–SW4). Several intentional violations were planted to validate detection.</p>
+
+    <div class="findings-table reveal">
+      <div class="findings-row header">
+        <div class="findings-cell">Device</div>
+        <div class="findings-cell">Violation Detected</div>
+        <div class="findings-cell">Result</div>
+      </div>
+      <div class="findings-row">
+        <div class="findings-cell">R1</div>
+        <div class="findings-cell">No violations</div>
+        <div class="findings-cell"><span class="badge badge-pass">Clean</span></div>
+      </div>
+      <div class="findings-row">
+        <div class="findings-cell">R2</div>
+        <div class="findings-cell">HTTP server enabled</div>
+        <div class="findings-cell"><span class="badge badge-fail">Violation</span></div>
+      </div>
+      <div class="findings-row">
+        <div class="findings-cell">R3</div>
+        <div class="findings-cell">Telnet enabled (transport input all)</div>
+        <div class="findings-cell"><span class="badge badge-fail">Violation</span></div>
+      </div>
+      <div class="findings-row">
+        <div class="findings-cell">R4</div>
+        <div class="findings-cell">No violations</div>
+        <div class="findings-cell"><span class="badge badge-pass">Clean</span></div>
+      </div>
+      <div class="findings-row">
+        <div class="findings-cell">SW1</div>
+        <div class="findings-cell">SSH version 1 in use</div>
+        <div class="findings-cell"><span class="badge badge-fail">Violation</span></div>
+      </div>
+      <div class="findings-row">
+        <div class="findings-cell">SW2</div>
+        <div class="findings-cell">No violations</div>
+        <div class="findings-cell"><span class="badge badge-pass">Clean</span></div>
+      </div>
+      <div class="findings-row">
+        <div class="findings-cell">SW3</div>
+        <div class="findings-cell">Session timeout set to 25 min</div>
+        <div class="findings-cell"><span class="badge badge-fail">Violation</span></div>
+      </div>
+      <div class="findings-row">
+        <div class="findings-cell">SW4</div>
+        <div class="findings-cell">No violations</div>
+        <div class="findings-cell"><span class="badge badge-pass">Clean</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONCLUSION -->
+  <section id="conclusion" class="conclusion">
+    <div class="conclusion-inner">
+      <div class="section-tag">// 06 — Conclusion</div>
+      <h2 class="section-title reveal">What this demonstrates</h2>
+      <p class="section-body reveal">This project goes beyond basic automation — it treats network configuration as structured state that can be queried, asserted, and reported on systematically. The same approach scales to hundreds of devices with zero additional manual effort.</p>
+
+      <blockquote class="reveal">
+        Using Ansible's native resource modules with <code style="color:var(--accent)">state: gathered</code> — instead of parsing raw CLI output — means the compliance logic is clean, readable, and maintainable. Every check is a testable assertion. Every failure is a clearly identified policy deviation. This is how network compliance should work at scale.
+      </blockquote>
+
+      <div style="margin-top:3rem;" class="reveal">
+        <a href="https://github.com/YOUR_USERNAME/YOUR_REPO" class="btn btn-primary">View Source on GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>Built by Ahmed · Network Engineer · Riyadh, Saudi Arabia</p>
+    <a href="https://github.com/YOUR_USERNAME">github.com/YOUR_USERNAME</a>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((e, i) => {
+        if (e.isIntersecting) {
+          setTimeout(() => e.target.classList.add('visible'), i * 80);
+        }
+      });
+    }, { threshold: 0.1 });
+    reveals.forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>
